@@ -23,20 +23,29 @@ try {
 const AI_MODEL = "gpt-4.1";
 const AI_VISION_MODEL = "gpt-4.1-mini";
 
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const apiUrl = (path) => `${API_BASE}${path}`;
+
 const API = {
-  OCR_IMAGE: "/api/ai/ocr-image",
-  GENERATE_COURSE: "/api/ai/generate-course",
-  ANALYZE_TEST: "/api/ai/analyze-test",
-  FOCUSED_COURSE: "/api/ai/focused-course",
+  OCR_IMAGE: apiUrl("/api/ai/ocr-image"),
+  GENERATE_COURSE: apiUrl("/api/ai/generate-course"),
+  ANALYZE_TEST: apiUrl("/api/ai/analyze-test"),
+  FOCUSED_COURSE: apiUrl("/api/ai/focused-course"),
 };
 
 const C = {
   bg: "#0d0d1a",
+  bgLight: "#f6f8ff",
   surf: "#13131f",
+  surfLight: "#ffffff",
   surf2: "#1a1a2e",
+  surf2Light: "#eef2ff",
   border: "#252540",
+  borderLight: "#d7defc",
   text: "#e2e8f0",
+  textLight: "#111827",
   muted: "#7c8db5",
+  mutedLight: "#475569",
   accent: "#6366f1",
   accent2: "#a855f7",
   success: "#22c55e",
@@ -303,6 +312,7 @@ const extractImageTextViaBackend = async (file) => {
 
 export default function App() {
   const [page, setPage] = useState("home");
+  const [theme, setTheme] = useState(() => localStorage.getItem("sb_theme") || "dark");
 
   // simple local persistence
   const [users, setUsers] = useState(() => {
@@ -339,11 +349,31 @@ export default function App() {
     localStorage.setItem("sb_courses", JSON.stringify(allCourses));
   }, [allCourses]);
 
+  useEffect(() => {
+    localStorage.setItem("sb_theme", theme);
+  }, [theme]);
+
+  const palette =
+    theme === "light"
+      ? {
+          bg: C.bgLight,
+          surf: C.surfLight,
+          surf2: C.surf2Light,
+          border: C.borderLight,
+          text: C.textLight,
+          muted: C.mutedLight,
+          accent: C.accent,
+          accent2: C.accent2,
+          success: C.success,
+          danger: C.danger,
+        }
+      : C;
+
   // fix full-width layout even if user keeps default Vite CSS somewhere
   useEffect(() => {
     document.body.style.margin = "0";
     document.body.style.padding = "0";
-    document.body.style.background = C.bg;
+    document.body.style.background = palette.bg;
     const root = document.getElementById("root");
     if (root) {
       root.style.margin = "0";
@@ -353,7 +383,7 @@ export default function App() {
       root.style.minHeight = "100vh";
       root.style.textAlign = "left";
     }
-  }, []);
+  }, [palette.bg]);
 
   const [af, setAf] = useState({ name: "", email: "", pass: "", confirmPass: "" });
   const [authErr, setAuthErr] = useState("");
@@ -395,11 +425,13 @@ export default function App() {
   };
 
   const signUp = () => {
-    if (!af.name || !af.email || !af.pass || !af.confirmPass) {
+    const name = af.name.trim();
+    const email = af.email.trim().toLowerCase();
+    if (!name || !email || !af.pass || !af.confirmPass) {
       setAuthErr("All fields are required.");
       return;
     }
-    if (users.find((u) => u.email === af.email)) {
+    if (users.find((u) => u.email === email)) {
       setAuthErr("Email already registered.");
       return;
     }
@@ -412,7 +444,7 @@ export default function App() {
       setAuthErr(pw.message);
       return;
     }
-    const nu = { name: af.name, email: af.email, pass: af.pass };
+    const nu = { name, email, pass: af.pass };
     setUsers((p) => [...p, nu]);
     setUser(nu);
     setAllCourses((p) => ({ ...p, [nu.email]: [] }));
@@ -421,7 +453,8 @@ export default function App() {
   };
 
   const signIn = () => {
-    const u = users.find((u) => u.email === af.email && u.pass === af.pass);
+    const email = af.email.trim().toLowerCase();
+    const u = users.find((u) => u.email === email && u.pass === af.pass);
     if (!u) {
       setAuthErr("Invalid credentials.");
       return;
@@ -617,16 +650,16 @@ export default function App() {
   const appStyle = {
     minHeight: "100vh",
     width: "100%",
-    background: C.bg,
-    color: C.text,
+    background: palette.bg,
+    color: palette.text,
     fontFamily: "'Inter',system-ui,sans-serif",
   };
 
   const Nav = () => (
     <nav
       style={{
-        background: C.surf,
-        borderBottom: `1px solid ${C.border}`,
+        background: palette.surf,
+        borderBottom: `1px solid ${palette.border}`,
         padding: "0 2rem",
         display: "flex",
         alignItems: "center",
@@ -638,29 +671,34 @@ export default function App() {
       }}
     >
       <Logo onClick={() => go("home")} />
-      <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
         {[
           ["home", "Home"],
           ["mycourses", "My Courses"],
           ["create", "Create Course"],
         ].map(([p, label]) => (
-          <span
+          <button
             key={p}
             onClick={() => go(p)}
             style={{
-              color: page === p ? C.accent : C.muted,
+              color: page === p ? palette.accent : palette.muted,
               cursor: "pointer",
               fontSize: "0.9rem",
               fontWeight: page === p ? 600 : 400,
               transition: "color 0.15s",
+              background: "transparent",
+              border: "none",
             }}
           >
             {label}
-          </span>
+          </button>
         ))}
+        <Btn outline onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}>
+          {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
+        </Btn>
         {user ? (
           <>
-            <span style={{ color: C.accent, fontSize: "0.9rem", fontWeight: 500 }}>
+            <span style={{ color: palette.accent, fontSize: "0.9rem", fontWeight: 500 }}>
               Welcome, {user.name}!
             </span>
             <Btn
@@ -677,7 +715,7 @@ export default function App() {
           <>
             <span
               onClick={() => go("signin")}
-              style={{ color: C.muted, cursor: "pointer", fontSize: "0.9rem" }}
+              style={{ color: palette.muted, cursor: "pointer", fontSize: "0.9rem" }}
             >
               Sign In
             </span>
@@ -693,10 +731,10 @@ export default function App() {
     return (
       <div style={appStyle}>
         <Nav />
-        <div style={{ ...wrap, textAlign: "center", paddingTop: "5rem" }}>
+        <div style={{ ...wrap, textAlign: "center", paddingTop: "4rem" }}>
           <p
             style={{
-              color: C.accent,
+              color: palette.accent,
               fontSize: "0.78rem",
               fontWeight: 700,
               letterSpacing: "3px",
@@ -728,14 +766,14 @@ export default function App() {
           </h1>
           <p
             style={{
-              color: C.muted,
+              color: palette.muted,
               fontSize: "1.1rem",
               maxWidth: "560px",
               margin: "0 auto 2.5rem",
               lineHeight: 1.8,
             }}
           >
-            Upload revision notes, handouts, or a syllabus. AI generates a structured, Coursera-style course with units, lessons, quizzes, and personalised feedback.
+            Create a structured online course in minutes. Upload your notes or syllabus and get units, lessons, quizzes, and personalised feedback.
           </p>
           <div
             style={{
@@ -746,12 +784,17 @@ export default function App() {
               flexWrap: "wrap",
             }}
           >
-            <Btn onClick={() => go("create")} style={{ padding: "0.9rem 2rem", fontSize: "1rem" }}>
-              Get Started →
+            <Btn onClick={() => go("create")} style={{ padding: "1rem 2.2rem", fontSize: "1rem" }}>
+              Generate your course →
             </Btn>
-            <Btn outline onClick={() => go("mycourses")} style={{ padding: "0.9rem 2rem", fontSize: "1rem" }}>
-              My Courses
-            </Btn>
+          </div>
+
+          <p style={{ color: palette.muted, marginTop: "-3rem", marginBottom: "3rem", fontSize: "0.9rem" }}>
+            Trusted by educators for private, server-side AI processing · 🔒 Your API key never leaves backend
+          </p>
+
+          <div style={{ color: palette.muted, marginBottom: "2.5rem", fontSize: "1.2rem" }} aria-hidden>
+            ↓ Scroll to see platform features
           </div>
 
           <div
@@ -787,11 +830,21 @@ export default function App() {
               <div key={i} style={card}>
                 <div style={{ fontSize: "1.75rem", marginBottom: "0.75rem" }}>{f.icon}</div>
                 <h3 style={{ marginBottom: "0.5rem", fontSize: "0.98rem" }}>{f.t}</h3>
-                <p style={{ color: C.muted, fontSize: "0.87rem", lineHeight: 1.65, margin: 0 }}>
-                  {f.d}
-                </p>
-              </div>
-            ))}
+                  <p style={{ color: palette.muted, fontSize: "0.87rem", lineHeight: 1.65, margin: 0 }}>
+                    {f.d}
+                  </p>
+                </div>
+              ))}
+          </div>
+
+          <div style={{ ...card, marginTop: "2rem", textAlign: "left" }}>
+            <h3 style={{ marginTop: 0 }}>Privacy & trust</h3>
+            <p style={{ color: palette.muted, marginBottom: "0.6rem" }}>
+              Your files are processed only for course generation. Keep your OpenAI key in backend env vars and deploy over HTTPS.
+            </p>
+            <p style={{ color: palette.muted, margin: 0 }}>
+              Suggested next pages: Privacy Policy · Terms of Service · Contact Support.
+            </p>
           </div>
         </div>
       </div>
@@ -823,18 +876,18 @@ export default function App() {
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               {su && (
                 <div>
-                  <label style={lbl}>Full Name</label>
-                  <input style={inp} placeholder="Jane Doe" value={af.name} onChange={(e) => setAf((p) => ({ ...p, name: e.target.value }))} />
+                  <label style={lbl} htmlFor="name">Full Name</label>
+                  <input id="name" style={{ ...inp, background: palette.surf2, border: `1px solid ${palette.border}`, color: palette.text }} placeholder="Jane Doe" value={af.name} onChange={(e) => setAf((p) => ({ ...p, name: e.target.value }))} />
                 </div>
               )}
               <div>
-                <label style={lbl}>Email</label>
-                <input style={inp} type="email" placeholder="you@example.com" value={af.email} onChange={(e) => setAf((p) => ({ ...p, email: e.target.value }))} />
+                <label style={lbl} htmlFor="email">Email</label>
+                <input id="email" style={{ ...inp, background: palette.surf2, border: `1px solid ${palette.border}`, color: palette.text }} type="email" placeholder="you@example.com" value={af.email} onChange={(e) => setAf((p) => ({ ...p, email: e.target.value }))} />
               </div>
 
               <div>
-                <label style={lbl}>Password</label>
-                <input style={inp} type="password" placeholder="••••••••" value={af.pass} onChange={(e) => setAf((p) => ({ ...p, pass: e.target.value }))} />
+                <label style={lbl} htmlFor="password">Password</label>
+                <input id="password" style={{ ...inp, background: palette.surf2, border: `1px solid ${palette.border}`, color: palette.text }} type="password" placeholder="••••••••" value={af.pass} onChange={(e) => setAf((p) => ({ ...p, pass: e.target.value }))} />
                 {su && (
                   <p style={{ color: C.muted, fontSize: "0.76rem", margin: "0.45rem 0 0" }}>
                     Use 8+ chars with uppercase, lowercase, number, and special character.
@@ -844,8 +897,8 @@ export default function App() {
 
               {su && (
                 <div>
-                  <label style={lbl}>Confirm Password</label>
-                  <input style={inp} type="password" placeholder="••••••••" value={af.confirmPass} onChange={(e) => setAf((p) => ({ ...p, confirmPass: e.target.value }))} />
+                  <label style={lbl} htmlFor="confirmPassword">Confirm Password</label>
+                  <input id="confirmPassword" style={{ ...inp, background: palette.surf2, border: `1px solid ${palette.border}`, color: palette.text }} type="password" placeholder="••••••••" value={af.confirmPass} onChange={(e) => setAf((p) => ({ ...p, confirmPass: e.target.value }))} />
                 </div>
               )}
 
@@ -853,9 +906,9 @@ export default function App() {
                 {su ? "Create Account" : "Sign In"}
               </Btn>
 
-              <p style={{ textAlign: "center", color: C.muted, fontSize: "0.88rem", margin: 0 }}>
+              <p style={{ textAlign: "center", color: palette.muted, fontSize: "0.88rem", margin: 0 }}>
                 {su ? "Already have an account? " : "Don't have an account? "}
-                <span style={{ color: C.accent, cursor: "pointer" }} onClick={() => { setAuthErr(""); go(su ? "signin" : "signup"); }}>
+                <span style={{ color: palette.accent, cursor: "pointer" }} onClick={() => { setAuthErr(""); go(su ? "signin" : "signup"); }}>
                   {su ? "Sign In" : "Sign Up"}
                 </span>
               </p>
@@ -948,12 +1001,29 @@ export default function App() {
         <Nav />
         <div style={{ ...wrap, maxWidth: "760px" }}>
           <h1 style={{ marginBottom: "0.4rem" }}>Create New Course</h1>
-          <p style={{ color: C.muted, marginBottom: "2rem" }}>
+          <p style={{ color: palette.muted, marginBottom: "2rem" }}>
             Upload your syllabus and let OpenAI build a full course for you (secure backend).
           </p>
 
           <Err msg={gErr} />
           <Info msg={gStatus} />
+
+          {(extracting || generating) && (
+            <div style={{ ...card, marginBottom: "1rem", padding: "1rem" }}>
+              <p style={{ marginTop: 0, marginBottom: "0.6rem", fontWeight: 600 }}>Generation progress</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "0.6rem" }}>
+                {[
+                  ["1. Extract", extracting || !!etxt],
+                  ["2. Generate", generating],
+                  ["3. Review", !!course],
+                ].map(([label, active]) => (
+                  <div key={label} style={{ borderRadius: "8px", padding: "0.5rem", textAlign: "center", background: active ? `${palette.accent}22` : palette.surf2, border: `1px solid ${active ? palette.accent : palette.border}` }}>
+                    <span style={{ fontSize: "0.8rem", color: active ? palette.text : palette.muted }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div style={{ ...card, marginBottom: "1.5rem" }}>
             <h3 style={{ marginBottom: "1rem" }}>📁 Upload Your Document</h3>
@@ -981,7 +1051,7 @@ export default function App() {
                 {file ? file.name : "Drop file here or click to browse"}
               </p>
               <p style={{ color: C.muted, fontSize: "0.85rem", margin: 0 }}>
-                PDF · DOCX · JPG · PNG
+                PDF · DOCX · JPG · PNG · Max recommended size: 10MB
               </p>
               <input
                 ref={fileRef}
@@ -995,8 +1065,14 @@ export default function App() {
             </div>
 
             {extracting && (
-              <p style={{ color: C.accent, marginTop: "0.75rem", fontSize: "0.88rem" }}>
+              <p style={{ color: palette.accent, marginTop: "0.75rem", fontSize: "0.88rem" }}>
                 ⏳ Extracting text locally...
+              </p>
+            )}
+
+            {file && (
+              <p style={{ color: palette.muted, fontSize: "0.83rem", marginTop: "0.6rem" }}>
+                Selected file size: {(file.size / (1024 * 1024)).toFixed(2)} MB
               </p>
             )}
 
